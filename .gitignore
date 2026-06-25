@@ -1,0 +1,23 @@
+# Node
+node_modules/
+dist/
+.turbo/
+
+# Rust / Cargo
+target/
+
+# Tauri generated files (checked in only for version pinning)
+apps/desktop/src-tauri/gen/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*

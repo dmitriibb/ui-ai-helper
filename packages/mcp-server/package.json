@@ -1,0 +1,21 @@
+{
+  "name": "ui-ai-helper-mcp",
+  "version": "0.1.0",
+  "description": "MCP server for UI AI Helper – lets AI agents capture screenshots and draw visual overlays on the user's screen",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "tsx": "^4",
+    "typescript": "^5"
+  }
+}

@@ -1,0 +1,23 @@
+[package]
+name = "ui-ai-helper"
+version = "0.1.0"
+description = "UI AI Helper desktop app"
+edition = "2021"
+
+[lib]
+name = "ui_ai_helper_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["full"] }
+axum = { version = "0.7", features = ["json"] }
+tower-http = { version = "0.5", features = ["cors"] }
+screenshots = "0.8"
+image = "0.24"
+base64 = "0.22"
