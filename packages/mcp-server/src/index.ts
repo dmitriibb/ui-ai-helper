@@ -24,6 +24,32 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import { tools, handleTool } from "./tools.js";
 
+const INSTRUCTIONS = `\
+You have access to the UI AI Helper, a desktop tool that lets you see the user's \
+screen and draw visual guidance on it.
+
+Use these tools whenever the user:
+- asks for help navigating a website or desktop application
+- is confused about where to click, what button to press, or how to find something
+- asks "where is", "how do I", "what should I click", or similar UI navigation questions
+- wants you to point something out or highlight an area on screen
+
+Typical workflow:
+1. Call capture_frame to take a screenshot of the framed region on the user's screen.
+2. Analyse the screenshot to understand the UI the user is looking at.
+3. Call show_overlay to draw arrows, boxes, or labels that guide the user visually.
+4. Explain in text what the user should do. Keep the explanation short — the visual hints do most of the work.
+5. Call clear_overlay when the user is done, or set ttlMs on show_overlay to auto-clear.
+
+The user positions the blue-bordered frame window over whatever they need help with \
+before asking you a question. The frame is always on top of other windows. \
+Overlay coordinates are in physical pixels relative to the top-left corner of the \
+capture area, which matches the pixel space of the screenshot returned by capture_frame.
+
+If the desktop app is not running, tool calls will fail with a clear error message. \
+Tell the user to start it with: cd apps/desktop && npm run dev\
+`;
+
 const server = new Server(
   {
     name: "ui-ai-helper",
@@ -33,6 +59,7 @@ const server = new Server(
     capabilities: {
       tools: {},
     },
+    instructions: INSTRUCTIONS,
   }
 );
 
