@@ -6,6 +6,8 @@ export interface Point {
 export type OverlayItemType = "rectangle" | "arrow" | "circle" | "text" | "highlight";
 
 export interface OverlayItem {
+  /** Unique id assigned by the frontend when items arrive. */
+  id?: string;
   type: OverlayItemType;
   // For rectangle, highlight
   x?: number;

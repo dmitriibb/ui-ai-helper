@@ -1,11 +1,13 @@
 mod api;
 mod capture;
+mod config;
 mod state;
 
 use std::sync::Arc;
 
 pub fn run() {
-    let shared_state = Arc::new(state::AppState::new());
+    let cfg = config::load_config();
+    let shared_state = Arc::new(state::AppState::new(cfg));
     let state_for_server = shared_state.clone();
 
     tauri::Builder::default()

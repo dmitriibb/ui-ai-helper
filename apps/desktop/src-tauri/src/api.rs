@@ -42,6 +42,8 @@ struct SetFrameRequest {
 #[serde(rename_all = "camelCase")]
 struct ShowOverlayRequest {
     items: Vec<OverlayItem>,
+    /// Optional TTL in milliseconds. When omitted the value from the user
+    /// config file (`overlayTtlMs`) is used as the default.
     ttl_ms: Option<u64>,
 }
 
@@ -81,6 +83,7 @@ pub async fn start_server(app_handle: AppHandle, app_state: Arc<AppState>) {
 
     let router = Router::new()
         .route("/health", get(health_handler))
+        .route("/config", get(config_handler))
         .route("/frame", get(get_frame_handler))
         .route("/frame", post(set_frame_handler))
         .route("/capture", post(capture_handler))
@@ -129,6 +132,14 @@ fn get_main_window(app: &AppHandle) -> Result<tauri::WebviewWindow, (StatusCode,
 
 async fn health_handler() -> Json<Value> {
     Json(json!({ "status": "ok", "version": "0.1.0", "port": API_PORT }))
+}
+
+/// Returns the current runtime configuration so MCP tools (and other callers)
+/// can read settings such as the default overlay TTL.
+async fn config_handler(State(state): State<ApiState>) -> Json<Value> {
+    Json(json!({
+        "overlayTtlMs": state.shared.config.overlay_ttl_ms
+    }))
 }
 
 async fn get_frame_handler(
@@ -218,10 +229,14 @@ async fn show_overlay_handler(
     State(state): State<ApiState>,
     Json(req): Json<ShowOverlayRequest>,
 ) -> Result<Json<Value>, (StatusCode, String)> {
-    let expires_at = req
-        .ttl_ms
-        .filter(|&ms| ms > 0)
-        .map(|ms| Instant::now() + Duration::from_millis(ms));
+    // Use caller-supplied TTL; fall back to the user config default.
+    let ttl_ms = req.ttl_ms.unwrap_or(state.shared.config.overlay_ttl_ms);
+
+    let expires_at = if ttl_ms > 0 {
+        Some(Instant::now() + Duration::from_millis(ttl_ms))
+    } else {
+        None
+    };
 
     {
         let mut overlay = state.shared.overlay.lock().unwrap();
@@ -229,14 +244,14 @@ async fn show_overlay_handler(
         overlay.expires_at = expires_at;
     }
 
-    // Notify frontend
+    // Always emit the resolved ttlMs so the frontend timer is consistent.
     state
         .app
         .emit(
             "overlay-updated",
             &serde_json::json!({
                 "items": req.items,
-                "ttlMs": req.ttl_ms
+                "ttlMs": if ttl_ms > 0 { serde_json::Value::from(ttl_ms) } else { serde_json::Value::Null }
             }),
         )
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;

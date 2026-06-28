@@ -1,3 +1,4 @@
+use crate::config::AppConfig;
 use serde::{Deserialize, Serialize};
 use std::sync::Mutex;
 use std::time::Instant;
@@ -43,15 +44,18 @@ pub struct OverlayState {
 
 pub struct AppState {
     pub overlay: Mutex<OverlayState>,
+    /// Loaded once at startup from the user config file.
+    pub config: AppConfig,
 }
 
 impl AppState {
-    pub fn new() -> Self {
+    pub fn new(config: AppConfig) -> Self {
         Self {
             overlay: Mutex::new(OverlayState {
                 items: Vec::new(),
                 expires_at: None,
             }),
+            config,
         }
     }
 }

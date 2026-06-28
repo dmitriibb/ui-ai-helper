@@ -1,15 +1,78 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, CSSProperties } from "react";
 import { OverlayItem } from "../types";
 
 interface Props {
   items: OverlayItem[];
+  onDismiss?: (id: string) => void;
 }
 
 const DEFAULT_COLOR = "#ff4444";
 const LABEL_FONT = "bold 13px system-ui, sans-serif";
 const LABEL_PADDING = 4;
 
-export function OverlayCanvas({ items }: Props) {
+// ─── X-button positioning ────────────────────────────────────────────────────
+
+/** Returns the centre position (in canvas/CSS logical pixels) for the dismiss
+ *  button of each item type. Returns null if there's nothing to anchor to. */
+function getXButtonPos(item: OverlayItem): { x: number; y: number } | null {
+  switch (item.type) {
+    case "rectangle":
+    case "highlight": {
+      const { x = 0, y = 0, width = 80 } = item;
+      // Top-right corner of the box
+      return { x: x + width, y };
+    }
+    case "circle": {
+      const { x = 0, y = 0, radius = 30 } = item;
+      // 45° above-right on the circle edge
+      return { x: x + radius * 0.707, y: y - radius * 0.707 };
+    }
+    case "arrow": {
+      if (!item.from || !item.to) return null;
+      // Midpoint of the arrow, shifted slightly above
+      return {
+        x: (item.from.x + item.to.x) / 2,
+        y: Math.min(item.from.y, item.to.y) - 12,
+      };
+    }
+    case "text": {
+      const { x = 0, y = 0 } = item;
+      return { x: x + 40, y: y - 12 };
+    }
+    default:
+      return null;
+  }
+}
+
+// ─── Dismiss button styles ───────────────────────────────────────────────────
+
+const dismissBtnStyle: CSSProperties = {
+  position: "absolute",
+  width: 18,
+  height: 18,
+  borderRadius: "50%",
+  background: "rgba(20, 20, 30, 0.88)",
+  border: "1px solid rgba(255, 255, 255, 0.5)",
+  color: "#fff",
+  fontSize: 12,
+  lineHeight: 1,
+  cursor: "pointer",
+  // pointer-events: auto overrides the parent's none so only these
+  // tiny buttons intercept mouse events — everything else passes through.
+  pointerEvents: "auto",
+  padding: 0,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  // Centre the button on the anchor point
+  transform: "translate(-50%, -50%)",
+  zIndex: 100,
+  userSelect: "none",
+};
+
+// ─── Component ───────────────────────────────────────────────────────────────
+
+export function OverlayCanvas({ items, onDismiss }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -36,6 +99,9 @@ export function OverlayCanvas({ items }: Props) {
   }, [items]);
 
   return (
+    // Outer wrapper: pointer-events none so all clicks pass through to the
+    // underlying content, EXCEPT for the explicit dismiss buttons below which
+    // set pointer-events: auto to override their parent.
     <div
       ref={containerRef}
       style={{
@@ -44,6 +110,7 @@ export function OverlayCanvas({ items }: Props) {
         pointerEvents: "none",
       }}
     >
+      {/* Drawing canvas */}
       <canvas
         ref={canvasRef}
         style={{
@@ -53,9 +120,33 @@ export function OverlayCanvas({ items }: Props) {
           pointerEvents: "none",
         }}
       />
+
+      {/* Per-item dismiss (×) buttons */}
+      {items.map((item) => {
+        if (!item.id) return null;
+        const pos = getXButtonPos(item);
+        if (!pos) return null;
+
+        return (
+          <button
+            key={item.id}
+            title="Dismiss"
+            onClick={() => onDismiss?.(item.id!)}
+            style={{
+              ...dismissBtnStyle,
+              left: pos.x,
+              top: pos.y,
+            }}
+          >
+            ×
+          </button>
+        );
+      })}
     </div>
   );
 }
+
+// ─── Canvas drawing ──────────────────────────────────────────────────────────
 
 function redraw(canvas: HTMLCanvasElement, items: OverlayItem[]) {
   const ctx = canvas.getContext("2d");

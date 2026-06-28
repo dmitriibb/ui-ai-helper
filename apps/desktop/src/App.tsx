@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { TitleBar } from "./components/TitleBar";
 import { OverlayCanvas } from "./components/OverlayCanvas";
@@ -12,11 +12,20 @@ export default function App() {
   const [overlayItems, setOverlayItems] = useState<OverlayItem[]>([]);
   const ttlTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const handleDismiss = useCallback((id: string) => {
+    setOverlayItems((prev) => prev.filter((item) => item.id !== id));
+  }, []);
+
   useEffect(() => {
     const unlisten = listen<{ items: OverlayItem[]; ttlMs?: number }>(
       "overlay-updated",
       (event) => {
-        setOverlayItems(event.payload.items);
+        // Assign a unique id to every item so each can be dismissed individually.
+        const itemsWithIds: OverlayItem[] = event.payload.items.map((item) => ({
+          ...item,
+          id: crypto.randomUUID(),
+        }));
+        setOverlayItems(itemsWithIds);
 
         if (ttlTimerRef.current) {
           clearTimeout(ttlTimerRef.current);
@@ -49,7 +58,7 @@ export default function App() {
           bottom: BORDER_WIDTH,
         }}
       >
-        <OverlayCanvas items={overlayItems} />
+        <OverlayCanvas items={overlayItems} onDismiss={handleDismiss} />
       </div>
     </div>
   );
